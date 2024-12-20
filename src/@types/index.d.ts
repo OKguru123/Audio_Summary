@@ -7,3 +7,12 @@ declare global {
     }
   }
 }
+
+
+export interface FileSchema {
+     filename : string,
+     fileUrl : string,
+     summariesText : string,
+     createdAt : Date,
+     updatedAt : Date
+}

@@ -17,8 +17,6 @@ const connectingDB = async () => {
   try {
     await sequelize.authenticate();
 
-    // Sync models with the database (Optional: Use in development only)
-
     await sequelize.sync({ alter: true }); // Adjust schema to match models
     logger.info('Database Synced Successfully');
   } catch (error) {

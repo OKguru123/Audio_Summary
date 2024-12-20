@@ -5,7 +5,7 @@ import express from 'express';
 import { config } from './config/index';
 import { registerMiddlewares, registerRoutes } from './middlewares';
 import { logger } from './helpers';
-import { connectingDB, sequelize } from './db/connectDB';
+import { connectingDB } from './db/connectDB';
 
 (async () => {
   try {

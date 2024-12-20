@@ -9,6 +9,8 @@ import cors from 'cors';
 import { handleApiError, routeNotFound } from './modules/v1/common/controllers';
 import routes from './modules';
 import { config } from './config';
+import fileRouter from './routes/file.router'
+import path from 'path';
 
 export function registerMiddlewares(app: Application) {
   app
@@ -25,10 +27,11 @@ export function registerMiddlewares(app: Application) {
         credentials: true,
       })
     )
-    .use(multer().single('file'))
+    .use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')))
     .disable('x-powered-by');
 }
 
 export function registerRoutes(app: Application) {
-  app.use('/api', routes).use(routeNotFound).use(handleApiError);
+  console.log("Router Middleware")
+  app.use('/api/file', fileRouter).use(routeNotFound).use(handleApiError);
 }
