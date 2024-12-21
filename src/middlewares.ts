@@ -9,7 +9,7 @@ import cors from 'cors';
 import { handleApiError, routeNotFound } from './modules/v1/common/controllers';
 import routes from './modules';
 import { config } from './config';
-import fileRouter from './routes/file.router'
+import fileRouter from './routes/file.router';
 import path from 'path';
 
 export function registerMiddlewares(app: Application) {
@@ -32,6 +32,5 @@ export function registerMiddlewares(app: Application) {
 }
 
 export function registerRoutes(app: Application) {
-  console.log("Router Middleware")
   app.use('/api/file', fileRouter).use(routeNotFound).use(handleApiError);
 }

@@ -8,6 +8,7 @@ import fs from 'fs';
 import { File } from '../Models/file.model';
 import logger from '../helpers/logger';
 import { FileSchema } from '../@types';
+
 const convertAudioToText = async (
   req: Request,
   res: Response,
@@ -54,6 +55,52 @@ const convertAudioToText = async (
       },
       error: false,
     });
+  } catch (error: any) {
+    return next(new CustomError(error?.message));
+  }
+};
+
+const convertUploadedAudioFileToText = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { audioFileId } = req.params;
+
+    if (!audioFileId) {
+      return next(new CustomError('Please Provide the File Id', 400));
+    }
+
+    const audioFile = (await File.findByPk(audioFileId))?.dataValues;
+
+    if (!audioFile) {
+       return next(new CustomError("File with Id not found" , 404))
+    }
+
+    const filePath = path.join(__dirname , "../public/uploads" , audioFile?.fileUrl)
+
+   
+
+    // Now send the streamFileData into the transcription text Function :-
+    const transcribedResponse = await getTranscriptionText(filePath);
+
+
+    if (!transcribedResponse || !transcribedResponse.text) {
+         return next (new CustomError("transcribed text not found"))
+    }
+    return response.success({
+     res,
+     code: 200,
+     data: {
+       success: true,
+       message: 'Your file uploaded and transcribed successfully',
+       transcription: transcribedResponse.text, // Assuming `data.text` contains the transcription
+     },
+     error: false,
+    })
+
+
   } catch (error: any) {
     return next(new CustomError(error?.message));
   }
@@ -171,9 +218,9 @@ const renameFileById = async (
 
     // console.log("Name and Id " , )
 
-    const audioFile : any = (await File.findByPk(audioFileId))?.dataValues;
+    const audioFile: any = (await File.findByPk(audioFileId))?.dataValues;
 
-    console.log("Audio File " , audioFile)
+    console.log('Audio File ', audioFile);
     if (!audioFile) {
       return next(new CustomError('File with Id not found', 404));
     }
@@ -182,41 +229,27 @@ const renameFileById = async (
       newName += '.mp3';
     }
 
-    //  Update The upload Folder Also :_
-    // const oldPath = path.join(
-    //   __dirname,
-    //   '../public/uploads',
-    //   audioFile?.filename
-    // );
-    // const newPath = path.join(__dirname, '../public/uploads', newName);
-    
-    // fs.rename(oldPath, newPath, async (error) => {
-    //   if (error) {
-    //     return next(new CustomError(error.message, 400));
-    //   }
-    // });
-    
-          const updatedAudioFile = await File.update(
-            {
-              filename: newName,
-            },
-            { where: { id: audioFileId } }
-          );
-    
-          if (!updatedAudioFile) {
-            return next(new CustomError('File Could not get Updated', 500));
-          }
-    
-          return response.success({
-            res,
-            code: 200,
-            data: {
-              success: true,
-              message: 'Audio Renamed Successfully',
-              updatedAudioFile,
-            },
-            error: false,
-          });
+    const updatedAudioFile = await File.update(
+      {
+        filename: newName,
+      },
+      { where: { id: audioFileId } }
+    );
+
+    if (!updatedAudioFile) {
+      return next(new CustomError('File Could not get Updated', 500));
+    }
+
+    return response.success({
+      res,
+      code: 200,
+      data: {
+        success: true,
+        message: 'Audio Renamed Successfully',
+        updatedAudioFile,
+      },
+      error: false,
+    });
   } catch (error: any) {
     return next(new CustomError(error?.message));
   }
@@ -234,22 +267,18 @@ const deleteFileById = async (
       return next(new CustomError('File Id is not Provide', 400));
     }
 
-    const fileToDelete : any  = (await File.findByPk(audioFileId))?.dataValues;
+    const fileToDelete: any = (await File.findByPk(audioFileId))?.dataValues;
 
     if (!fileToDelete) {
       return next(new CustomError('File to delete not found', 404));
     }
 
-    console.log("Deleted File ", fileToDelete)
+    console.log('Deleted File ', fileToDelete);
 
-     const pathName = fileToDelete?.fileUrl
-     let fileName = path.basename(pathName)
-     console.log("fileName " , fileName)
-    const filePath = path.join(
-      __dirname,
-      '../public/uploads',
-      fileName
-    );
+    const pathName = fileToDelete?.fileUrl;
+    let fileName = path.basename(pathName);
+    console.log('fileName ', fileName);
+    const filePath = path.join(__dirname, '../public/uploads', fileName);
 
     fs.unlink(filePath, async (error) => {
       if (error) {
@@ -281,4 +310,60 @@ const deleteFileById = async (
     return next(new CustomError(error?.message));
   }
 };
-export { convertAudioToText, UploadAudioFile, getAllAudio, renameFileById, deleteFileById };
+
+const deleteAllAudioFile = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const allAudioFiles = await File.findAll();
+
+    const uploadDir = path.join(__dirname, '../public/uploads');
+
+    const filesToDelete = allAudioFiles.map((file: any) => ({
+      filePath: path.join(uploadDir, path.basename(file.fileUrl)),
+      fileId: file.id,
+    }));
+
+    const deleteOperations = filesToDelete.map(async ({ filePath, fileId }) => {
+      try {
+        await fs.promises.unlink(filePath);
+
+        const isDeleted = await File.destroy({ where: { id: fileId } });
+        if (!isDeleted) {
+          throw new Error(
+            `File with ID ${fileId} could not be deleted from the database`
+          );
+        }
+      } catch (error: any) {
+        throw new Error(`Error deleting file ${filePath}: ${error.message}`);
+      }
+    });
+
+    console.log(deleteOperations, 'Delete Operation');
+    await Promise.all(deleteOperations);
+
+    return response.success({
+      res,
+      code: 200,
+      data: {
+        success: true,
+        message: 'All Audio Files Deleted Successfully',
+      },
+      error: false,
+    });
+  } catch (error: any) {
+    return next(new CustomError(error.message, 500));
+  }
+};
+
+export {
+  convertAudioToText,
+  UploadAudioFile,
+  getAllAudio,
+  renameFileById,
+  deleteFileById,
+  deleteAllAudioFile,
+  convertUploadedAudioFileToText
+};
