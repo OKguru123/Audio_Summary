@@ -10,6 +10,7 @@ import { handleApiError, routeNotFound } from './modules/v1/common/controllers';
 import routes from './modules';
 import { config } from './config';
 import fileRouter from './routes/file.router';
+import userRouter from './routes/user.rotuer';
 import path from 'path';
 
 export function registerMiddlewares(app: Application) {
@@ -33,4 +34,9 @@ export function registerMiddlewares(app: Application) {
 
 export function registerRoutes(app: Application) {
   app.use('/api/file', fileRouter).use(routeNotFound).use(handleApiError);
+  
+}
+export function allUserRoutes (app : Application) {
+  app.use('/api/user' , userRouter).use(routeNotFound).use(handleApiError)
+  
 }

@@ -19,19 +19,27 @@ async function sendEmail(data: SendEmailPayload): Promise<boolean> {
     if (!data.text && !data.html) {
       return false;
     }
+    // service: 'gmail',
+    //   host: 'smtp.gmail.com',
+    //   port: 465,
+    //   secure: true,
+    //   auth: {
+    //   user: "yadavtanishq949@gmail.com",
+    //   pass : "wzbk dgva dwom uxqw"
+    //   },
 
     transporter = nodemailer.createTransport({
-      host: config.MAIL_HOST,
-      port: config.MAIL_PORT,
-      secure: false,
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
       auth: {
-        user: config.MAIL_USERNAME,
-        pass: config.MAIL_PASSWORD,
+        user: "yadavtanishq949@gmail.com",
+        pass: "wego wiwc zmxg fwig",
       },
     });
-
+    console.log("Mail send To " , data.receiver)
     await transporter.sendMail({
-      from: `${config.MAIL_DISPLAY_NAME} <${config.MAIL_FROM}>`,
+      from: `Tanishq Yadav`,
       to: data.receiver,
       subject: data.subject,
       html: data.html,

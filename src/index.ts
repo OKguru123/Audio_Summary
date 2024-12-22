@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 import express from 'express';
 import { config } from './config/index';
-import { registerMiddlewares, registerRoutes } from './middlewares';
+import { allUserRoutes, registerMiddlewares, registerRoutes } from './middlewares';
 import { logger } from './helpers';
 import { connectingDB } from './db/connectDB';
 
@@ -24,7 +24,9 @@ function bootstrapServer() {
   const PORT = config.PORT;
 
   registerMiddlewares(app);
+  allUserRoutes(app);
   registerRoutes(app);
+
 
   app.listen(PORT, () => {
     logger.info(`Server listening on port ${PORT}`);
