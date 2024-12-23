@@ -3,7 +3,7 @@ import * as z from 'zod';
 
 const configSchema = z
   .object({
-    PORT: z.preprocess(Number, z.number()).default(8080).readonly(),
+    PORT: z.preprocess(Number, z.number()).default(8081).readonly(),
     NODE_ENV: z
       .enum(['DEVELOPMENT', 'PRODUCTION', 'STAGING'])
       .default('DEVELOPMENT')

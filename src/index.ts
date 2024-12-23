@@ -3,9 +3,10 @@ import dotenv from 'dotenv';
 dotenv.config();
 import express from 'express';
 import { config } from './config/index';
-import { allUserRoutes, registerMiddlewares, registerRoutes } from './middlewares';
+import { registerMiddlewares, registerRoutes } from './middlewares';
 import { logger } from './helpers';
 import { connectingDB } from './db/connectDB';
+import { handleApiError, routeNotFound } from './modules/v1/common/controllers';
 
 (async () => {
   try {
@@ -23,10 +24,15 @@ function bootstrapServer() {
 
   const PORT = config.PORT;
 
-  registerMiddlewares(app);
-  allUserRoutes(app);
-  registerRoutes(app);
 
+  registerMiddlewares(app);
+
+ 
+  registerRoutes(app); 
+
+ 
+  app.use(routeNotFound);
+  app.use(handleApiError);
 
   app.listen(PORT, () => {
     logger.info(`Server listening on port ${PORT}`);
@@ -44,3 +50,5 @@ process.on('unhandledRejection', (reason, promise) => {
 process.on('uncaughtException', (error) => {
   logger.error('Uncaught Exception:', error);
 });
+
+

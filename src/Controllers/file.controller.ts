@@ -2,12 +2,9 @@ import { Request, Response, NextFunction } from 'express';
 import { CustomError } from '../errors/error';
 import response from '../helpers/response';
 import path from 'path';
-import { convertDataIntoStreams } from '../utils/createFileStream';
-import { getTranscriptionText } from '../utils/TranscriptionTextOfFile';
 import fs from 'fs';
 import { File } from '../Models/file.model';
-import logger from '../helpers/logger';
-import { FileSchema } from '../@types';
+import axios from 'axios';
 
 const convertAudioToText = async (
   req: Request,
@@ -18,49 +15,73 @@ const convertAudioToText = async (
     if (!req.file) {
       return next(
         new CustomError(
-          'Please Provide the audio File that was expected to be uploaded for transcription',
+          'Please provide the audio file that was expected to be uploaded for transcription',
           400
         )
       );
     }
 
-    const audioFilePath = req.file?.path;
-
+    const audioFilePath = req.file.path;
     if (!audioFilePath) {
       return next(
         new CustomError('File could not be uploaded successfully', 400)
       );
     }
 
-    // Step 1: Convert the file relative path into an absolute path
     const absoluteFilePath = path.resolve(audioFilePath);
-    console.log('My File Absolute Path:', absoluteFilePath);
+    const url = 'https://api.deepgram.com/v1/listen?summarize=v2';
+    const apiKey = process.env.DEEP_GRAM_API_KEY;
 
-    // Step 2: Create a stream of the audio file
-    const streamFileData = convertDataIntoStreams(absoluteFilePath);
-    console.log('Stream File Data:', streamFileData);
+    const headers = {
+      Accept: 'application/json',
+      Authorization: `Token ${apiKey}`,
+      'Content-Type': 'audio/mpeg',
+    };
 
-    // Step 3: Get the transcription from OpenAI API
-    const data = await getTranscriptionText(streamFileData);
-    console.log('Transcription Data:', data);
+    const response = await axios.post(
+      url,
+      fs.createReadStream(absoluteFilePath),
+      {
+        headers,
+        params: {
+          diarize: true,
+        },
+      }
+    );
+    const results = response.data.results.channels[0].alternatives[0];
+    const words = results.words;
 
-    // If transcription was successful, return the result
-    return response.success({
-      res,
-      code: 200,
-      data: {
-        success: true,
-        message: 'Your file uploaded and transcribed successfully',
-        transcription: data.text, // Assuming `data.text` contains the transcription
-      },
-      error: false,
+    if (response?.data?.results?.summary?.result != 'success') {
+      return next(
+        new CustomError('Could not compile the summary for the audio File', 500)
+      );
+    }
+
+    const summary = response?.data?.results?.summary?.short;
+    const uniqueSpeakers = new Set(words.map((word: any) => word.speaker));
+    const numberOfSpeakers = uniqueSpeakers.size;
+
+    res.json({
+      success: true,
+      message: 'Audio transcription and speaker identification successful',
+      transcription: results.transcript,
+      speakers: numberOfSpeakers,
+      summary,
     });
   } catch (error: any) {
-    return next(new CustomError(error?.message));
+    console.error('Deepgram Error:', error.response?.data || error.message);
+    return next(
+      new CustomError(
+        error.response?.data?.message ||
+          error.message ||
+          'Internal server error',
+        500
+      )
+    );
   }
 };
 
-const convertUploadedAudioFileToText = async (
+const summarizeOnClick = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -69,40 +90,76 @@ const convertUploadedAudioFileToText = async (
     const { audioFileId } = req.params;
 
     if (!audioFileId) {
-      return next(new CustomError('Please Provide the File Id', 400));
+      return next(new CustomError('Please Provide the fileId', 400));
     }
 
     const audioFile = (await File.findByPk(audioFileId))?.dataValues;
 
     if (!audioFile) {
-       return next(new CustomError("File with Id not found" , 404))
+      return next(new CustomError('File with requested File not found', 404));
     }
 
-    const filePath = path.join(__dirname , "../public/uploads" , audioFile?.fileUrl)
+    const fileBaseURL = path.basename(audioFile?.fileUrl);
 
-   
+    const filePath = path.join(__dirname, '../public/uploads', fileBaseURL);
 
-    // Now send the streamFileData into the transcription text Function :-
-    const transcribedResponse = await getTranscriptionText(filePath);
+    const url = 'https://api.deepgram.com/v1/listen?summarize=v2';
+    const apiKey = process.env.DEEP_GRAM_API_KEY;
 
+    const headers = {
+      Accept: 'application/json',
+      Authorization: `Token ${apiKey}`,
+      'Content-Type': 'audio/mpeg',
+    };
 
-    if (!transcribedResponse || !transcribedResponse.text) {
-         return next (new CustomError("transcribed text not found"))
+    const response = await axios.post(url, fs.createReadStream(filePath), {
+      headers,
+      params: {
+        diarize: true,
+      },
+    });
+
+    const results = response?.data?.results?.channels[0]?.alternatives[0];
+    const words = results?.words;
+
+    if (response?.data?.results?.summary?.result != 'success') {
+      return next(
+        new CustomError('Could not compile the summary for the audio File', 500)
+      );
     }
-    return response.success({
-     res,
-     code: 200,
-     data: {
-       success: true,
-       message: 'Your file uploaded and transcribed successfully',
-       transcription: transcribedResponse.text, // Assuming `data.text` contains the transcription
-     },
-     error: false,
-    })
 
+    const summary = response?.data?.results?.summary?.short;
+    const uniqueSpeakers = new Set(words.map((word: any) => word?.speaker));
+    const numberOfSpeakers = uniqueSpeakers.size;
 
+    await File.update(
+      {
+        summariesText: summary,
+        speakers: numberOfSpeakers,
+      },
+      {
+        where: {
+          id: audioFileId,
+        },
+      }
+    );
+
+    const updatedFile = await File.findByPk(audioFileId);
+    res.json({
+      success: true,
+      message: 'Audio Summary & Speakers',
+      updatedFile,
+    });
   } catch (error: any) {
-    return next(new CustomError(error?.message));
+    console.error('Deepgram Error:', error.response?.data || error.message);
+    return next(
+      new CustomError(
+        error.response?.data?.message ||
+          error.message ||
+          'Internal server error',
+        500
+      )
+    );
   }
 };
 
@@ -113,36 +170,26 @@ const UploadAudioFile = async (
 ) => {
   try {
     const file = req.file;
+
     if (!file?.path) {
       return next(new CustomError('Please Provide the file Path', 400));
     }
-
-    //  Check Name :-
-
     const isNameExist = await File.findOne({
       where: {
         filename: file.originalname,
       },
     });
 
-    console.log(isNameExist);
-
     if (isNameExist) {
-      console.log('Hitting here');
       return next(new CustomError('File With this name already exist', 400));
     }
 
-    console.log('IS Here ', file.path);
-
-    const publicDir = path.join(__dirname, '..', 'public', 'uploads'); // Adjust path as needed
-    console.log(publicDir);
+    const publicDir = path.join(__dirname, '..', 'public', 'uploads');
     if (!fs.existsSync(publicDir)) {
       fs.mkdirSync(publicDir, { recursive: true });
     }
 
     const targetPath = path.join(publicDir, file?.filename);
-
-    //   Move the file from current multer uploaded path to the public directory path :-
     fs.rename(file.path, targetPath, async (err) => {
       if (err) {
         return next(new CustomError(err?.message, 400));
@@ -150,7 +197,6 @@ const UploadAudioFile = async (
 
       const fileUrl = `/uploads/${file.filename}`;
 
-      //   API Call For Storing in DB :-
       const uploadedFile = await File.create({
         filename: file.originalname,
         fileUrl: fileUrl,
@@ -216,11 +262,8 @@ const renameFileById = async (
       return next(new CustomError('File Id is not Provide', 400));
     }
 
-    // console.log("Name and Id " , )
-
     const audioFile: any = (await File.findByPk(audioFileId))?.dataValues;
 
-    console.log('Audio File ', audioFile);
     if (!audioFile) {
       return next(new CustomError('File with Id not found', 404));
     }
@@ -273,11 +316,8 @@ const deleteFileById = async (
       return next(new CustomError('File to delete not found', 404));
     }
 
-    console.log('Deleted File ', fileToDelete);
-
     const pathName = fileToDelete?.fileUrl;
     let fileName = path.basename(pathName);
-    console.log('fileName ', fileName);
     const filePath = path.join(__dirname, '../public/uploads', fileName);
 
     fs.unlink(filePath, async (error) => {
@@ -341,7 +381,6 @@ const deleteAllAudioFile = async (
       }
     });
 
-    console.log(deleteOperations, 'Delete Operation');
     await Promise.all(deleteOperations);
 
     return response.success({
@@ -365,5 +404,5 @@ export {
   renameFileById,
   deleteFileById,
   deleteAllAudioFile,
-  convertUploadedAudioFileToText
+  summarizeOnClick,
 };

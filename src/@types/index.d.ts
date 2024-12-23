@@ -16,3 +16,9 @@ export interface FileSchema {
      createdAt : Date,
      updatedAt : Date
 }
+
+export interface DecodedJWTPayloadType {
+     userId : string,
+     username? : string,
+     userEmail? : string
+}

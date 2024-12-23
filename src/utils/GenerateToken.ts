@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken'
 
 
-interface userInfoType  {
+export interface userInfoType  {
        username? : string,
        userEmail? : string,
        userId : string
