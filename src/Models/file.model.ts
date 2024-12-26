@@ -13,7 +13,7 @@ const File = sequelize.define('File', {
          allowNull : false
     },
     summariesText : {
-       type : DataTypes.STRING,
+       type : DataTypes.TEXT,
        allowNull : true,
        defaultValue : ""
     },

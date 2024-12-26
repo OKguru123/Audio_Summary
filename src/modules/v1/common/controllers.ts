@@ -10,6 +10,8 @@ export function routeNotFound() {
   throw new CustomError('Route not found', 404);
 }
 
+
+
 export function handleApiError(
   error: Error,
   _req: Request,

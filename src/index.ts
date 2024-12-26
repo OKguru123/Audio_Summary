@@ -24,18 +24,16 @@ function bootstrapServer() {
 
   const PORT = config.PORT;
 
-
   registerMiddlewares(app);
 
- 
-  registerRoutes(app); 
+  registerRoutes(app);
 
- 
   app.use(routeNotFound);
   app.use(handleApiError);
 
   app.listen(PORT, () => {
     logger.info(`Server listening on port ${PORT}`);
+    console.log(`server is running on,${PORT}`);
   });
 }
 
@@ -50,5 +48,3 @@ process.on('unhandledRejection', (reason, promise) => {
 process.on('uncaughtException', (error) => {
   logger.error('Uncaught Exception:', error);
 });
-
-
