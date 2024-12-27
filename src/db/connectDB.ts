@@ -9,7 +9,7 @@ const sequelize = new Sequelize(
   {
     host: process.env.DB_HOST,
     dialect: 'postgres',
-    logging: false, // Disable SQL logging
+    logging: false, 
   }
 );
 
@@ -17,11 +17,11 @@ const connectingDB = async () => {
   try {
     await sequelize.authenticate();
 
-    await sequelize.sync({ alter: true }); // Adjust schema to match models
+    await sequelize.sync({ alter: true }); 
     logger.info('Database Synced Successfully');
   } catch (error) {
     logger.error('Error connecting to the database:', error);
-    throw error; // Throw error to allow graceful shutdown in the calling function
+    throw error; 
   }
 };
 

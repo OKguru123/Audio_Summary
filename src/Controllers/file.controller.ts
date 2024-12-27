@@ -28,10 +28,9 @@ const convertAudioToText = async (
         new CustomError('File could not be uploaded successfully', 400)
       );
     }
-    // console.log("audioFilePath",audioFilePath)
 
     const absoluteFilePath = path.resolve(audioFilePath);
-    // console.log("absoluteFilePath",absoluteFilePath)
+
     const url = 'https://api.deepgram.com/v1/listen?summarize=v2';
     const apiKey = process.env.DEEP_GRAM_API_KEY;
 
@@ -51,7 +50,6 @@ const convertAudioToText = async (
         },
       }
     );
-    // console.log(response,"respponse from deepgram");
 
     const results = response.data.results.channels[0].alternatives[0];
     const words = results.words;
@@ -86,7 +84,7 @@ const convertAudioToText = async (
   }
 };
 
-const summarizeOnClick = async ( 
+const summarizeOnClick = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -102,14 +100,11 @@ const summarizeOnClick = async (
 
     if (!audioFile) {
       return next(new CustomError('File with requested File not found', 404));
-   
     }
 
     const fileBaseURL = path.basename(audioFile?.fileUrl);
 
     const filePath = path.join(__dirname, '../public/uploads', fileBaseURL);
-    // console.log( filePath,"file path");
-    
 
     const url = 'https://api.deepgram.com/v1/listen?summarize=v2';
     const apiKey = process.env.DEEP_GRAM_API_KEY;
@@ -119,9 +114,6 @@ const summarizeOnClick = async (
       Authorization: `Token ${apiKey}`,
       'Content-Type': 'audio/mpeg',
     };
-    const readeddata=fs.createReadStream(filePath);
-    // console.log(readeddata)
-
 
     const response = await axios.post(url, fs.createReadStream(filePath), {
       headers,
@@ -133,21 +125,20 @@ const summarizeOnClick = async (
     const results = response?.data?.results?.channels[0]?.alternatives[0];
     const words = results?.words;
 
-    if (response?.data?.results?.summary?.result != 'success') { 
-
+    if (response?.data?.results?.summary?.result != 'success') {
       return next(
         new CustomError('Could not compile the summary for the audio File', 500)
       );
-    } 
+    }
 
     const summary = response?.data?.results?.summary?.short;
     const uniqueSpeakers = new Set(words.map((word: any) => word?.speaker));
     const numberOfSpeakers = uniqueSpeakers.size;
 
-    await File.update( 
+    await File.update(
       {
         summariesText: summary,
-        speakers: numberOfSpeakers, 
+        speakers: numberOfSpeakers,
       },
       {
         where: {
@@ -183,9 +174,7 @@ const UploadAudioFile = async (
   try {
     const file = req.file;
 
-    const {fileName}=req.body;
-
-    // console.log(file,"file from req.file");
+    const { fileName } = req.body;
 
     if (!file?.path || !fileName) {
       return next(new CustomError('Please Provide the file Path', 400));
@@ -201,30 +190,23 @@ const UploadAudioFile = async (
     }
 
     const publicDir = path.join(__dirname, '..', 'public', 'uploads');
-    // console.log(__dirname,"curent directory")
+
     if (!fs.existsSync(publicDir)) {
       fs.mkdirSync(publicDir, { recursive: true });
     }
 
     const targetPath = path.join(publicDir, file?.filename);
-    // console.log(targetPath,"TARGET PATH");
-    // console.log(file.path,"BEFORE CHANGE file path");
-    
 
     fs.rename(file.path, targetPath, async (err) => {
       if (err) {
         return next(new CustomError(err?.message, 400));
       }
 
-      // console.log(file.path,"after CHANGE file path");
-
       const fileUrl = `/uploads/${file.filename}`;
 
-      const uploadedFile = await File.create({ 
-
+      const uploadedFile = await File.create({
         filename: fileName,
         fileUrl: fileUrl,
-
       });
 
       if (!uploadedFile) {
@@ -242,9 +224,7 @@ const UploadAudioFile = async (
       });
     });
   } catch (error: any) {
-
     return next(new CustomError(error?.message));
-    
   }
 };
 
@@ -346,7 +326,6 @@ const deleteFileById = async (
     const pathName = fileToDelete?.fileUrl;
     let fileName = path.basename(pathName);
     const filePath = path.join(__dirname, '../public/uploads', fileName);
-    
 
     fs.unlink(filePath, async (error) => {
       if (error) {
@@ -425,6 +404,57 @@ const deleteAllAudioFile = async (
   }
 };
 
+const deleteMultipleAudioFiles = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { fileIds } = req.body;
+    if (!Array.isArray(fileIds) || fileIds.length === 0) {
+      throw new Error('No file IDs provided.');
+    }
+
+    const audioFiles = await File.findAll({
+      where: { id: fileIds },
+    });
+
+    if (audioFiles.length === 0) {
+      throw new Error('No matching audio files found for the given IDs.');
+    }
+
+    const uploadDir = path.join(__dirname, '../public/uploads');
+
+    const filesToDelete = audioFiles.map((file: any) => ({
+      filePath: path.join(uploadDir, path.basename(file.fileUrl)),
+      fileId: file.id,
+    }));
+
+    const deleteOperations = filesToDelete.map(async ({ filePath, fileId }) => {
+      try {
+        await fs.promises.unlink(filePath);
+
+        const isDeleted = await File.destroy({ where: { id: fileId } });
+        if (!isDeleted) {
+          throw new Error(
+            `File with ID ${fileId} could not be deleted from the database`
+          );
+        }
+      } catch (error: any) {
+        throw new Error(`Error deleting file ${filePath}: ${error.message}`);
+      }
+    });
+
+    await Promise.all(deleteOperations);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Selected files deleted successfully.',
+    });
+  } catch (error: any) {
+    return next(new CustomError(error.message, 500));
+  }
+};
 export {
   convertAudioToText,
   UploadAudioFile,
@@ -433,4 +463,5 @@ export {
   deleteFileById,
   deleteAllAudioFile,
   summarizeOnClick,
+  deleteMultipleAudioFiles,
 };

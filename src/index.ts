@@ -35,7 +35,8 @@ function bootstrapServer() {
     logger.info(`Server listening on port ${PORT}`);
     console.log(`server is running on,${PORT}`);
   });
-}
+} 
+
 
 function handleServerInitError(e: unknown) {
   logger.error('Error initializing server:', e);
