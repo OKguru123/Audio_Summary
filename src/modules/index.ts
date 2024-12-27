@@ -39,4 +39,5 @@ function registerRoutes(currentDir = __dirname) {
 
 registerRoutes();
 
+
 export default router;

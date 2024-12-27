@@ -5,6 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import { File } from '../Models/file.model';
 import axios from 'axios';
+import { Console } from 'console';
 
 const convertAudioToText = async (
   req: Request,
@@ -29,6 +30,7 @@ const convertAudioToText = async (
     }
 
     const absoluteFilePath = path.resolve(audioFilePath);
+
     const url = 'https://api.deepgram.com/v1/listen?summarize=v2';
     const apiKey = process.env.DEEP_GRAM_API_KEY;
 
@@ -48,6 +50,7 @@ const convertAudioToText = async (
         },
       }
     );
+
     const results = response.data.results.channels[0].alternatives[0];
     const words = results.words;
 
@@ -171,12 +174,14 @@ const UploadAudioFile = async (
   try {
     const file = req.file;
 
-    if (!file?.path) {
+    const { fileName } = req.body;
+
+    if (!file?.path || !fileName) {
       return next(new CustomError('Please Provide the file Path', 400));
     }
     const isNameExist = await File.findOne({
       where: {
-        filename: file.originalname,
+        filename: fileName,
       },
     });
 
@@ -185,11 +190,13 @@ const UploadAudioFile = async (
     }
 
     const publicDir = path.join(__dirname, '..', 'public', 'uploads');
+
     if (!fs.existsSync(publicDir)) {
       fs.mkdirSync(publicDir, { recursive: true });
     }
 
     const targetPath = path.join(publicDir, file?.filename);
+
     fs.rename(file.path, targetPath, async (err) => {
       if (err) {
         return next(new CustomError(err?.message, 400));
@@ -198,7 +205,7 @@ const UploadAudioFile = async (
       const fileUrl = `/uploads/${file.filename}`;
 
       const uploadedFile = await File.create({
-        filename: file.originalname,
+        filename: fileName,
         fileUrl: fileUrl,
       });
 
@@ -397,6 +404,57 @@ const deleteAllAudioFile = async (
   }
 };
 
+const deleteMultipleAudioFiles = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { fileIds } = req.body;
+    if (!Array.isArray(fileIds) || fileIds.length === 0) {
+      throw new Error('No file IDs provided.');
+    }
+
+    const audioFiles = await File.findAll({
+      where: { id: fileIds },
+    });
+
+    if (audioFiles.length === 0) {
+      throw new Error('No matching audio files found for the given IDs.');
+    }
+
+    const uploadDir = path.join(__dirname, '../public/uploads');
+
+    const filesToDelete = audioFiles.map((file: any) => ({
+      filePath: path.join(uploadDir, path.basename(file.fileUrl)),
+      fileId: file.id,
+    }));
+
+    const deleteOperations = filesToDelete.map(async ({ filePath, fileId }) => {
+      try {
+        await fs.promises.unlink(filePath);
+
+        const isDeleted = await File.destroy({ where: { id: fileId } });
+        if (!isDeleted) {
+          throw new Error(
+            `File with ID ${fileId} could not be deleted from the database`
+          );
+        }
+      } catch (error: any) {
+        throw new Error(`Error deleting file ${filePath}: ${error.message}`);
+      }
+    });
+
+    await Promise.all(deleteOperations);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Selected files deleted successfully.',
+    });
+  } catch (error: any) {
+    return next(new CustomError(error.message, 500));
+  }
+};
 export {
   convertAudioToText,
   UploadAudioFile,
@@ -405,4 +463,5 @@ export {
   deleteFileById,
   deleteAllAudioFile,
   summarizeOnClick,
+  deleteMultipleAudioFiles,
 };
