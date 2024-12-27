@@ -258,7 +258,6 @@ const renameFileById = async (
 ) => {
   try {
     const { audioFileId } = req.params;
-
     let { newName } = req.body;
 
     if (!newName) {
@@ -403,7 +402,7 @@ const deleteAllAudioFile = async (
     return next(new CustomError(error.message, 500));
   }
 };
-
+// delete multiple audio
 const deleteMultipleAudioFiles = async (
   req: Request,
   res: Response,
@@ -449,7 +448,7 @@ const deleteMultipleAudioFiles = async (
 
     return res.status(200).json({
       success: true,
-      message: 'Selected files deleted successfully.',
+      message: 'Selected files deleted successfully Done.',
     });
   } catch (error: any) {
     return next(new CustomError(error.message, 500));
