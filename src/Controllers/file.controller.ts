@@ -63,6 +63,7 @@ const convertAudioToText = async (
     const summary = response?.data?.results?.summary?.short;
     const uniqueSpeakers = new Set(words.map((word: any) => word.speaker));
     const numberOfSpeakers = uniqueSpeakers.size;
+    console.log('summary generated', summary);
 
     res.json({
       success: true,
@@ -119,10 +120,23 @@ const summarizeOnClick = async (
       headers,
       params: {
         diarize: true,
+        model: 'nova-2',
+        smart_format: true,
       },
     });
 
+    // console.log('response', response);
+
     const results = response?.data?.results?.channels[0]?.alternatives[0];
+    // console.log('result', results);
+    // console.log(
+    //   response?.data?.results?.channels[0]?.alternatives[0]?.paragraphs
+    //     .transcript,
+    //   ' result data'
+    // );
+    const transcript= response?.data?.results?.channels[0]?.alternatives[0]?.paragraphs.transcript;
+
+
     const words = results?.words;
 
     if (response?.data?.results?.summary?.result != 'success') {
@@ -138,6 +152,7 @@ const summarizeOnClick = async (
     await File.update(
       {
         summariesText: summary,
+
         speakers: numberOfSpeakers,
       },
       {
@@ -152,6 +167,7 @@ const summarizeOnClick = async (
       success: true,
       message: 'Audio Summary & Speakers',
       updatedFile,
+      transcript
     });
   } catch (error: any) {
     console.error('Deepgram Error:', error.response?.data || error.message);
