@@ -125,15 +125,10 @@ const summarizeOnClick = async (
       },
     });
 
-    // console.log('response', response);
+   
 
     const results = response?.data?.results?.channels[0]?.alternatives[0];
-    // console.log('result', results);
-    // console.log(
-    //   response?.data?.results?.channels[0]?.alternatives[0]?.paragraphs
-    //     .transcript,
-    //   ' result data'
-    // );
+    
     const transcript= response?.data?.results?.channels[0]?.alternatives[0]?.paragraphs.transcript;
 
 
@@ -418,7 +413,7 @@ const deleteAllAudioFile = async (
     return next(new CustomError(error.message, 500));
   }
 };
-// delete multiple audio
+
 const deleteMultipleAudioFiles = async (
   req: Request,
   res: Response,
