@@ -9,19 +9,18 @@ const sequelize = new Sequelize(
   {
     host: process.env.DB_HOST,
     dialect: 'postgres',
-    logging: false, 
+    logging: false,
   }
 );
 
 const connectingDB = async () => {
   try {
     await sequelize.authenticate();
-
-    await sequelize.sync({ alter: true }); 
+    await sequelize.sync({ alter: true });
     logger.info('Database Synced Successfully');
   } catch (error) {
     logger.error('Error connecting to the database:', error);
-    throw error; 
+    throw error;
   }
 };
 
