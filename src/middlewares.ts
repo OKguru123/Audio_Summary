@@ -32,5 +32,5 @@ export function registerMiddlewares(app: Application) {
 
 export function registerRoutes(app: Application) {
   app.use('/api/file', fileRouter);
+  
 }
-
