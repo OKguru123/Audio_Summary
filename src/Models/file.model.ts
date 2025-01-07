@@ -18,6 +18,11 @@ const File = sequelize.define(
       allowNull: true,
       defaultValue: '',
     },
+    transcript: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      defaultValue: '',
+    },
     speakers: {
       type: DataTypes.INTEGER,
       allowNull: true,

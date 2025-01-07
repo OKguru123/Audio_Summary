@@ -63,7 +63,6 @@ const convertAudioToText = async (
     const summary = response?.data?.results?.summary?.short;
     const uniqueSpeakers = new Set(words.map((word: any) => word.speaker));
     const numberOfSpeakers = uniqueSpeakers.size;
-    console.log('summary generated', summary);
 
     res.json({
       success: true,
@@ -119,9 +118,10 @@ const summarizeOnClick = async (
     const response = await axios.post(url, fs.createReadStream(filePath), {
       headers,
       params: {
-        diarize: true,
         model: 'nova-2',
         smart_format: true,
+        punctuate: true,
+        diarize: true,
       },
     });
 
@@ -142,6 +142,9 @@ const summarizeOnClick = async (
     const summary = response?.data?.results?.summary?.short;
     const uniqueSpeakers = new Set(words.map((word: any) => word?.speaker));
     const numberOfSpeakers = uniqueSpeakers.size;
+    const transcriptText =
+      response?.data?.results?.channels[0]?.alternatives[0]?.paragraphs
+        .transcript;
 
     await File.update(
       {
@@ -475,3 +478,4 @@ export {
   summarizeOnClick,
   deleteMultipleAudioFiles,
 };
+

@@ -8,17 +8,17 @@ declare global {
   }
 }
 
-
 export interface FileSchema {
-     filename : string,
-     fileUrl : string,
-     summariesText : string,
-     createdAt : Date,
-     updatedAt : Date
+  filename: string;
+  fileUrl: string;
+  summariesText: string;
+  transcript: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface DecodedJWTPayloadType {
-     userId : string,
-     username? : string,
-     userEmail? : string
+  userId: string;
+  username?: string;
+  userEmail?: string;
 }
