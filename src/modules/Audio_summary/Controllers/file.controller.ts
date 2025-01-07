@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { CustomError } from '../errors/error';
-import response from '../helpers/response';
+import { CustomError } from '../../../errors/error';
+import response from '../../../helpers/response';
 import path from 'path';
 import fs from 'fs';
 import { File } from '../Models/file.model';
@@ -63,7 +63,6 @@ const convertAudioToText = async (
     const summary = response?.data?.results?.summary?.short;
     const uniqueSpeakers = new Set(words.map((word: any) => word.speaker));
     const numberOfSpeakers = uniqueSpeakers.size;
-    console.log('summary generated', summary);
 
     res.json({
       success: true,
@@ -104,8 +103,10 @@ const summarizeOnClick = async (
     }
 
     const fileBaseURL = path.basename(audioFile?.fileUrl);
+    console.log(path.join(__dirname), 'current ditectory');
 
     const filePath = path.join(__dirname, '../public/uploads', fileBaseURL);
+    console.log(filePath, 'file path');
 
     const url = 'https://api.deepgram.com/v1/listen?summarize=v2';
     const apiKey = process.env.DEEP_GRAM_API_KEY;
@@ -119,17 +120,14 @@ const summarizeOnClick = async (
     const response = await axios.post(url, fs.createReadStream(filePath), {
       headers,
       params: {
-        diarize: true,
         model: 'nova-2',
         smart_format: true,
+        punctuate: true,
+        diarize: true,
       },
     });
 
     const results = response?.data?.results?.channels[0]?.alternatives[0];
-
-    const transcript =
-      response?.data?.results?.channels[0]?.alternatives[0]?.paragraphs
-        .transcript;
 
     const words = results?.words;
 
@@ -142,13 +140,17 @@ const summarizeOnClick = async (
     const summary = response?.data?.results?.summary?.short;
     const uniqueSpeakers = new Set(words.map((word: any) => word?.speaker));
     const numberOfSpeakers = uniqueSpeakers.size;
+    const transcriptText =
+      response?.data?.results?.channels[0]?.alternatives[0]?.paragraphs
+        .transcript;
 
     await File.update(
       {
         summariesText: summary,
 
         speakers: numberOfSpeakers,
-        transcript: transcript,
+
+        transcript: transcriptText,
       },
       {
         where: {
@@ -162,7 +164,6 @@ const summarizeOnClick = async (
       success: true,
       message: 'Audio Summary & Speakers',
       updatedFile,
-      transcript,
     });
   } catch (error: any) {
     console.error('Deepgram Error:', error.response?.data || error.message);
