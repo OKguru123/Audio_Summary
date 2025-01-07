@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { myUploader } from '../../../Middleware/multer';
+import { myUploader } from '../Middleware/multer';
 import {
   convertAudioToText,
   deleteAllAudioFile,
@@ -10,7 +10,7 @@ import {
   summarizeOnClick,
   UploadAudioFile,
 } from '../Controllers/file.controller';
-import { PromiseHandler } from '../../v1/common/middlewares';
+import { PromiseHandler } from '../modules/v1/common/middlewares';
 
 const router = Router();
 router.post(

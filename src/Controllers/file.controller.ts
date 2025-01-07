@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { CustomError } from '../../../errors/error';
-import response from '../../../helpers/response';
+import { CustomError } from '../errors/error';
+import response from '../helpers/response';
 import path from 'path';
 import fs from 'fs';
 import { File } from '../Models/file.model';
@@ -103,10 +103,8 @@ const summarizeOnClick = async (
     }
 
     const fileBaseURL = path.basename(audioFile?.fileUrl);
-    console.log(path.join(__dirname), 'current ditectory');
 
     const filePath = path.join(__dirname, '../public/uploads', fileBaseURL);
-    console.log(filePath, 'file path');
 
     const url = 'https://api.deepgram.com/v1/listen?summarize=v2';
     const apiKey = process.env.DEEP_GRAM_API_KEY;
@@ -476,3 +474,4 @@ export {
   summarizeOnClick,
   deleteMultipleAudioFiles,
 };
+

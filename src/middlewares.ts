@@ -8,7 +8,7 @@ import cors from 'cors';
 import { handleApiError, routeNotFound } from './modules/v1/common/controllers';
 import routes from './modules';
 import { config } from './config';
-import fileRouter from './modules/Audio_summary/routes/file.router';
+import fileRouter from './routes/file.router';
 import path from 'path';
 
 export function registerMiddlewares(app: Application) {
@@ -32,5 +32,4 @@ export function registerMiddlewares(app: Application) {
 
 export function registerRoutes(app: Application) {
   app.use('/api/file', fileRouter);
-  
 }
